@@ -72,7 +72,7 @@ def get_url_list(user, gtype='', start=1):
         url_list.extend(url_list_tmp)
         start += 10
         print start
-        break
+        break ## とりあえず1ループで止めておく
         
     return url_list
 
@@ -149,8 +149,8 @@ def url_to_kifudata(url):
 
 if __name__ == '__main__':
 
-    ## 自分の棋譜のurlのリストを取得
-    url_list = get_url_list('sklearn', gtype='')
+    ## 棋譜のurlのリストを取得
+    url_list = get_url_list('1_tsutsukana', gtype='')
 
     ## test code
     ui = 0
