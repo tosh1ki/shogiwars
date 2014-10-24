@@ -43,7 +43,7 @@ def get_url_list(user, gtype='', start=1):
 
     Example
     ----------
-    >>> username = 'sklearn'
+    >>> username = '1_tsutsukana'
     >>> url_list = get_url_list(username)
     11
     21
