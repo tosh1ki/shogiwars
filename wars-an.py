@@ -14,6 +14,7 @@ from BeautifulSoup import BeautifulSoup
 import time
 import pdb
 import re
+from datetime import datetime as dt
 
 INTERVAL_TIME = 5
 SWARS_URL_PATTERN = re.compile(r'(?:http\:\/\/shogiwars\.heroz\.jp\:3002\/games\/)(?P<sente>\w+)-(?P<gote>\w+)-(?P<date>[0-9_]+)')
@@ -107,7 +108,8 @@ def wcsa_to_csa(wars_csa, gtype):
     for i,w in enumerate(wcsa_list):
         if i%2==0:
             ## 駒の動き，あるいは特殊な命令の処理
-            ## TODO: GOTE_TORYO_hoge みたいな文字列をきちんとCSA形式のものに置換する．
+            ## TODO: GOTE_TORYO_hoge みたいな文字列を
+            ##       きちんとCSA形式のものに置換する．
             results.append(w)
         else:
 
@@ -131,6 +133,8 @@ def wcsa_to_csa(wars_csa, gtype):
 
 def url_to_kifudata(url):
     u''' urlが指す棋譜とそれに関する情報を辞書にまとめて返す．
+
+    明示されていない棋譜ページの仕様に依存しているので，そのうち使えなくなる可能性がある．
     '''
     html = get_html(url)
 
@@ -142,6 +146,9 @@ def url_to_kifudata(url):
     ## 棋譜の取得
     wars_csa = re.findall(r'(?<=receiveMove\(\").+(?=\"\);)', html)[0]
     _dict['csa'] = wcsa_to_csa(wars_csa, '')
+
+    ## 時刻オブジェクトの生成
+    _dict['datetime'] = dt.strptime(date, '%Y%m%d_%H%M%S')
 
     return _dict
 
