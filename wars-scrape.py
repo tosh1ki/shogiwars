@@ -202,6 +202,8 @@ def append_mongodb(url_list, reflesh=False):
 
 
 def set_kif_to_db(username, gtype='', max_iter=10):
+    u''' 指定したユーザーの最近の棋譜をmongodbに追加する．
+    '''
     ## 棋譜のurlのリストを取得
     url_list = get_url_list(username, gtype=gtype, max_iter=max_iter)
 
@@ -216,5 +218,5 @@ if __name__ == '__main__':
     gtype = 's1'
     max_iter = 10000
 
-    set_kif_to_db(username, gtype=gtype, max_iter=10000)
+#    set_kif_to_db(username, gtype=gtype, max_iter=10000)
 
