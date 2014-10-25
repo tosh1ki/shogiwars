@@ -24,9 +24,21 @@ GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){.+?}', re.DOTALL)
 
 
 def get_html(url):
-    time.sleep(INTERVAL_TIME)
+    if url == '':
+        return ''
 
-    response = urllib2.urlopen(url)
+    for i in range(5):
+        try:
+            time.sleep(INTERVAL_TIME)
+            response = urllib2.urlopen(url)
+        except:
+            print 'Error : urllib2.urlopen()'
+        else:
+            break
+    else:
+        ## 5回リトライしてダメだったらエラーを吐いて死ぬ．
+        sys.exit(1)
+            
     html = response.read()
     response.close()
 
@@ -96,6 +108,11 @@ def wcsa_to_csa(wars_csa, gtype):
 
     wcsa_list = re.split(r'[,\t]', wars_csa)
 
+    ## 1手も指さずに時間切れor接続切れ
+    if wars_csa == '\tGOTE_WIN_TIMEOUT' or\
+       wars_csa == '\tGOTE_WIN_DISCONNECT':
+        return '%TIME_UP'
+
     if gtype == '': 
         max_time = 60*10
     elif gtype == 'sb': 
@@ -114,7 +131,7 @@ def wcsa_to_csa(wars_csa, gtype):
         if i%2==0:
             ## 駒の動き，あるいは特殊な命令の処理
             ## CAUTION: 仕様がわからないので全部網羅できているかわからない
-            if w.find('TORYO') > 0:
+            if w.find('TORYO') > 0 or w.find('DISCONNECT') > 0:
                 w_ap = '%TORYO'
             elif w.find('TIMEOUT') > 0:
                 w_ap = '%TIME_UP'
@@ -191,6 +208,10 @@ def append_mongodb(url_list, reflesh=False):
     sys.stdout.flush()
 
     for _url in url_list:
+        ## _url が空の場合はcontinue
+        if not _url:
+            continue
+
         _id = re.findall(id_pattern, _url)[0]
 
         ## DB 内にあって，かつrefleshがfalseのときはcontinueする
