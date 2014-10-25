@@ -135,6 +135,8 @@ def wcsa_to_csa(wars_csa, gtype):
                 w_ap = '%TORYO'
             elif w.find('TIMEOUT') > 0:
                 w_ap = '%TIME_UP'
+            elif w.find('DRAW_SENNICHI') > 0:
+                w_ap = '%SENNICHITE'
             else:
                 w_ap = w
 
