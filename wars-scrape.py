@@ -211,6 +211,34 @@ def set_kif_to_db(username, gtype='', max_iter=10):
     append_mongodb(url_list)
     
 
+def get_tournament_users(title='seitei', max_page=10):
+    u''' 
+    Examples
+    ----------
+    将棋ウォーズ聖帝戦に参加しているユーザーのidを取得する．
+    >>> get_tournament_users('seitei', max_page=100)
+    '''
+    page = 0
+    base_url = 'http://shogiwars.heroz.jp/events/'
+    results = []
+
+    while True:
+        url = ''.join([base_url, title, '?start=', str(page)])
+        html = get_html(url)
+        _users = re.findall(r'\/users\/(\w+)',html)
+
+        ## _usersが空でない場合追加．そうでなければbreak
+        if _users:
+            results.extend(_users)
+            page += 25
+        else:
+            break
+        
+        if page > max_page:
+            break
+
+    return results
+
 if __name__ == '__main__':
 
     ## Example
