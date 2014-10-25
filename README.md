@@ -7,6 +7,11 @@
 
 [shogiwars.heroz.jp/robots.txt](http://shogiwars.heroz.jp/robots.txt)
 
+### その他リンク
+
+- [日本将棋連盟公認 将棋ウォーズ ~ 将棋ゲームの決定版](http://shogiwars.heroz.jp/)
+- [nbviewer.ipython.org/github/tosh1ki/wars-an/blob/master/wars-visualize.ipynb](http://nbviewer.ipython.org/github/tosh1ki/wars-an/blob/master/wars-visualize.ipynb)
+
 ### 参考文献
 
 - [CSA標準棋譜ファイル形式](http://www.computer-shogi.org/protocol/record_v22.html)

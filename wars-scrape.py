@@ -32,7 +32,7 @@ def get_html(url):
 
     return html
 
-def get_url_list(user, gtype='', start=1, max_iter=10):
+def get_url_list(user, gtype='', max_iter=10):
     u''' 指定したユーザーの棋譜を取得する．
 
     Parameters
@@ -45,8 +45,6 @@ def get_url_list(user, gtype='', start=1, max_iter=10):
             ''   : 10 min. (default)
             'sb' :  3 min. (bullet mode)
             's1' : 10 sec.
-    start
-        Number of start point (Numeric)
     max_iter
         取得する最大数．10個ずつ取得するたびに判定しているので10個弱はずれる．
 
@@ -60,6 +58,7 @@ def get_url_list(user, gtype='', start=1, max_iter=10):
 
     base_url = 'http://shogiwars.heroz.jp/users/history/'
     url_list = []
+    start = 1
 
     while True:
         url = ''.join([base_url,user, 
@@ -202,6 +201,14 @@ def append_mongodb(url_list, reflesh=False):
         col.insert(kifu_dict)
 
 
+def set_kif_to_db(username, gtype='', max_iter=10):
+    ## 棋譜のurlのリストを取得
+    url_list = get_url_list(username, gtype=gtype, max_iter=max_iter)
+
+    ## mongoDB に追加
+    append_mongodb(url_list)
+    
+
 if __name__ == '__main__':
 
     ## Example
@@ -209,8 +216,5 @@ if __name__ == '__main__':
     gtype = 's1'
     max_iter = 10000
 
-    ## 棋譜のurlのリストを取得
-    url_list = get_url_list(username, gtype=gtype, max_iter=max_iter)
+    set_kif_to_db(username, gtype=gtype, max_iter=10000)
 
-    ## mongoDB に追加
-    append_mongodb(url_list)
