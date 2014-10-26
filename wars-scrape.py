@@ -181,6 +181,7 @@ def url_to_kifudata(url):
     _dict['datetime'] = dt.datetime.strptime(_dict['date'], '%Y%m%d_%H%M%S')
 
     _dict['_id'] = _dict.pop('name')
+    _dict['wcsa'] = wars_csa
 
     return _dict
 
