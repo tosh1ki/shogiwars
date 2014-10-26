@@ -24,6 +24,11 @@ GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){.+?}', re.DOTALL)
 
 
 def get_html(url):
+    u''' 指定したURLの指すHTMLファイルを取得して返す．
+
+    url=='' なら '' を返す．
+    5回リトライしてダメだったらエラーを吐いて死ぬ．
+    '''
     if url == '':
         return ''
 
@@ -36,7 +41,6 @@ def get_html(url):
         else:
             break
     else:
-        ## 5回リトライしてダメだったらエラーを吐いて死ぬ．
         sys.exit(1)
             
     html = response.read()
@@ -53,10 +57,6 @@ def get_url_list(user, gtype='', max_iter=10):
         User name (string)
     gtype
         Kifu type (string)
-        example
-            ''   : 10 min. (default)
-            'sb' :  3 min. (bullet mode)
-            's1' : 10 sec.
     max_iter
         取得する最大数．10個ずつ取得するたびに判定しているので10個弱はずれる．
 
@@ -100,17 +100,18 @@ def wcsa_to_csa(wars_csa, gtype):
 
     Parameters
     ----------
-    wars_csa : 
+    wars_csa
         将棋ウォーズ特有のCSA形式で表された棋譜の文字列
-    gtype : 
+    gtype
         処理したい棋譜のgtype
     '''
 
     wcsa_list = re.split(r'[,\t]', wars_csa)
 
-    ## 1手も指さずに時間切れor接続切れ
+    ## 1手も指さずに時間切れ or 接続切れ or 投了
     if wars_csa == '\tGOTE_WIN_TIMEOUT' or\
-       wars_csa == '\tGOTE_WIN_DISCONNECT':
+       wars_csa == '\tGOTE_WIN_DISCONNECT' or\
+       wars_csa == '\tGOTE_WIN_TORYO':
         return '%TIME_UP'
 
     if gtype == '': 
@@ -257,7 +258,7 @@ def get_tournament_users(title='seitei', max_page=10):
         else:
             break
         
-        if page > max_page:
+        if page >= max_page:
             break
 
     return results

@@ -4,16 +4,24 @@
 
 - wars-scrape.py
   - 将棋ウォーズの棋譜を収集するための各種関数
+  - 実行する前に `mongod --config mongodb.config`, `mongo`でMongoDBを起動して，`use warskifu` などとしておく．
 - wars-visualize.ipynb
   - スクレイピングしたデータの解析，可視化
   - [nbviewer.ipython.org/github/tosh1ki/wars-an/blob/master/wars-visualize.ipynb](http://nbviewer.ipython.org/github/tosh1ki/wars-an/blob/master/wars-visualize.ipynb)
 
 
 ### 将棋ウォーズのrobots.txt
-棋譜をクローリングするわけだし一応 `robots.txt` を確認しておこう，と思って見てみたら全文コメントアウトされていた．そのうち編集される可能性が高そうなので，プログラムを実行する際には少し注意する．
+「棋譜をクローリングするわけだし一応 `robots.txt` を確認しておこう」と思って見てみたら全文コメントアウトされていて困った．そのうち編集される可能性が高そうなので，**プログラムを実行する際には注意する**．
 
 [shogiwars.heroz.jp/robots.txt](http://shogiwars.heroz.jp/robots.txt)
 
+
+### gtype
+棋譜に付属している情報で，`gtype` というのがある．おそらく game type(?) の略だと思う．
+
+- '' : 10分切れ負け
+- 'sb' : 3分切れ負け (bullet modeの'b'?)
+- 's1' : 10秒指し
 
 ### 将棋ウォーズの独自棋譜フォーマットについて
 将棋ウォーズではCSA形式に似た独自の棋譜フォーマットを用いている．仕様がわからないので推測した結果を以下にメモしておく．
