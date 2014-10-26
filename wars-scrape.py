@@ -21,7 +21,7 @@ import pymongo
 INTERVAL_TIME = 5
 WCSA_PATTERN = re.compile(r'(?<=receiveMove\(\").+(?=\"\);)')
 GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){.+?}', re.DOTALL)
-
+SUB_PATTERN = re.compile(r'\n\t\t(?P<key>\w+)(?=:)')
 
 def get_html(url):
     u''' 指定したURLの指すHTMLファイルを取得して返す．
@@ -58,14 +58,8 @@ def get_url_list(user, gtype='', max_iter=10):
     gtype
         Kifu type (string)
     max_iter
-        取得する最大数．10個ずつ取得するたびに判定しているので10個弱はずれる．
-
-    Example
-    ----------
-    >>> username = '1_tsutsukana'
-    >>> url_list = get_url_list(username)
-    >>> len(url_list)>0
-    True
+        取得する最大数．
+        10個ずつ取得するたびに判定しており厳密には守るつもりはない．
     '''
 
     base_url = 'http://shogiwars.heroz.jp/users/history/'
@@ -162,24 +156,19 @@ def wcsa_to_csa(wars_csa, gtype):
 
 def url_to_kifudata(url):
     u''' urlが指す棋譜とそれに関する情報を辞書にまとめて返す．
-
-    CAUTION : 明示されていない棋譜ページの仕様に依存しているので，
-    そのうち使えなくなる可能性がある．
     '''
     html = get_html(url)
     
     ## 対局に関するデータの取得
     res = re.findall(GAME_HEADER_PATTERN, html)[0]
-    _dict = eval(re.sub(r'\n\t\t(?P<key>\w+)(?=:)','"\g<key>"', res))
+    _dict = eval(re.sub(SUB_PATTERN,'"\g<key>"', res))
     _dict['user0'], _dict['user1'], _dict['date'] = _dict['name'].split('-')
 
     ## 棋譜の取得
     wars_csa = re.findall(WCSA_PATTERN, html)[0]
     _dict['csa'] = wcsa_to_csa(wars_csa, _dict['gtype'])
 
-    ## 時刻オブジェクトの生成
     _dict['datetime'] = dt.datetime.strptime(_dict['date'], '%Y%m%d_%H%M%S')
-
     _dict['_id'] = _dict.pop('name')
     _dict['wcsa'] = wars_csa
 
@@ -228,6 +217,14 @@ def append_mongodb(url_list, reflesh=False):
 
 def set_kif_to_db(username, gtype='', max_iter=10):
     u''' 指定したユーザーの最近の棋譜をmongodbに追加する．
+
+    Example
+    ----------
+    >>> username = '1_tsutsukana'
+    >>> gtype = 's1'
+    >>> max_iter = 10000
+
+    >>> set_kif_to_db(username, gtype=gtype, max_iter=10)
     '''
     ## 棋譜のurlのリストを取得
     url_list = get_url_list(username, gtype=gtype, max_iter=max_iter)
@@ -266,10 +263,7 @@ def get_tournament_users(title='seitei', max_page=10):
 
 if __name__ == '__main__':
 
-    ## Example
-    username = '1_tsutsukana'
-    gtype = 's1'
-    max_iter = 10000
-
-#    set_kif_to_db(username, gtype=gtype, max_iter=10000)
-
+    ## 聖帝戦で1〜100位になったプレーヤーの棋譜を取得する．
+    t_users = get_tournament_users('seitei', max_page=1000)
+    for _user in t_users:
+        set_kif_to_db(_user, gtype='s1', max_iter=100)

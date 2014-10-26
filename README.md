@@ -4,6 +4,7 @@
 
 - wars-scrape.py
   - 将棋ウォーズの棋譜を収集するための各種関数
+  - **明示されていない棋譜ページの仕様に依存しているので，各関数がそのうち使えなくなる可能性がある．**
   - 実行する前に `mongod --config mongodb.config`, `mongo`でMongoDBを起動して，`use warskifu` などとしておく．
 - wars-visualize.ipynb
   - スクレイピングしたデータの解析，可視化
