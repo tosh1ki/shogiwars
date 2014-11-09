@@ -44,6 +44,7 @@
 - `SENTE_WIN_DISCONNECT` : 後手接続切れで先手勝ち
 - `SENTE_WIN_TIMEOUT` : 後手時間切れで先手勝ち
 - `SENTE_WIN_ENTERINGKING` : 先手が入玉宣言して勝ち?
+- `SENTE_WIN_OUTE_SENNICHI` : 後手連続王手の千日手による反則負けで先手勝ち
 - `DRAW_SENNICHI` : 千日手で引き分け
 
 などがある．**「相入玉で引き分け」もあるはず(?)だが確認できていない．**
