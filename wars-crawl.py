@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 
 
-import sys
-import urllib2
-from BeautifulSoup import BeautifulSoup
 import re
+import os
+import sys
 import time
+import sqlite3
+import requests
 import datetime as dt
-import pymongo
+import pandas as pd
+from bs4 import BeautifulSoup
 
 
 INTERVAL_TIME = 5
@@ -22,8 +24,8 @@ def get_session(url, params={}):
 
     time.sleep(INTERVAL_TIME)
     
-    for n in range(RETRY_MAX):
-        res = self.session.get(url, params=params)
+    for n in range(MAX_N_RETRY):
+        res = requests.session().get(url, params=params)
     
         if res.status_code == 200:
             return res
@@ -31,10 +33,16 @@ def get_session(url, params={}):
         print('retry (get_session)')
         time.sleep(10*n*SLEEP_TIME)
     else:
-        sys.exit('Exceeded RETRY_MAX (get_sesion())')
+        sys.exit('Exceeded MAX_N_RETRY (get_sesion())')
 
 
-def get_url_list(user, gtype='', max_iter=10):
+def connect_sqlite(filepath):
+    con = sqlite3.connect(filepath)
+    con.text_factory = str
+    return con
+
+
+def get_url_list(user, gtype, max_iter=10):
     u''' 指定したユーザーの棋譜を取得する．
 
     Parameters
@@ -53,12 +61,13 @@ def get_url_list(user, gtype='', max_iter=10):
     start = 1
 
     while True:
-        url = ''.join([base_url,user, 
+        url = ''.join([base_url, user, 
                        '?gtype=', str(gtype), 
                        '&start=', str(start)])
 
-        session = get_session(url)
-        soup = BeautifulSoup(session.text)
+        text = get_session(url).text
+        text = session.text.encode('ISO-8859-1').decode('utf-8')
+        soup = BeautifulSoup(text)
         url_list_tmp = [div.a['href'] 
                         for div in soup('div', {'class':'short_btn1'})]
 
@@ -101,7 +110,7 @@ def wcsa_to_csa(wars_csa, gtype):
     elif gtype == 's1': 
         max_time = 3600
     else: 
-        print 'Error: gtypeに不正な値; gtype={0}'.format(gtype)
+        print('Error: gtypeに不正な値; gtype={0}'.format(gtype))
 
     sente_prev_remain_time = max_time
     gote_prev_remain_time = max_time
@@ -141,9 +150,9 @@ def wcsa_to_csa(wars_csa, gtype):
 
 
 def url_to_kifudata(url):
-    u''' urlが指す棋譜とそれに関する情報を辞書にまとめて返す．
+    ''' urlが指す棋譜とそれに関する情報を辞書にまとめて返す．
     '''
-    html = get_html(url)
+    html = get_session(url).text
     
     ## 対局に関するデータの取得
     res = re.findall(GAME_HEADER_PATTERN, html)[0]
@@ -161,30 +170,24 @@ def url_to_kifudata(url):
     return _dict
 
 
-def connect_mongodb():
-    u''' MongoDBに接続
-    '''
-    connection = pymongo.Connection('localhost',27017)
-    db = connection.warskifu
-    return db.kifu
-
-
-def append_mongodb(url_list, reflesh=False):
-    u''' url_list 中の url の指す棋譜を取得してCSA形式に変換，mongoDBに追加．
+def append_to_sqlite(url_list, dbpath, reflesh=False):
+    ''' url_list 中の url の指す棋譜を取得してCSA形式に変換，mongoDBに追加．
     '''
 
     id_pattern = re.compile(r'\w+-\w+-\w+')
 
-    ## connect to mongoDB
-    col = connect_mongodb()
+    ## connect to SQLite
+    con = connect_sqlite(dbpath)
 
     n_list = len(url_list)
     sec = n_list * INTERVAL_TIME
     finish_time = dt.datetime.now() + dt.timedelta(seconds=sec)
 
-    print '{0}件の棋譜'.format(n_list)
-    print '棋譜収集終了予定時刻 : {0}'.format(finish_time)
+    print('{0}件の棋譜'.format(n_list))
+    print('棋譜収集終了予定時刻 : {0}'.format(finish_time))
     sys.stdout.flush()
+
+    ret_list = []
 
     for _url in url_list:
         ## _url が空の場合はcontinue
@@ -197,12 +200,15 @@ def append_mongodb(url_list, reflesh=False):
         if col.find({u'_id':_id}).count() > 0 and not reflesh:
             continue
 
-        kifu_dict = url_to_kifudata(_url)
-        col.insert(kifu_dict)
+        ret_list.append(url_to_kifudata(_url))
+
+    df = pd.DataFrame(ret_list)
+    if not df.empty:
+        df.to_sql('kifu', con, index=False, if_exists='append')
 
 
-def set_kif_to_db(username, gtype='', max_iter=10):
-    u''' 指定したユーザーの最近の棋譜をmongodbに追加する．
+def set_kif_to_db(dbpath, username, gtype='', max_iter=10):
+    ''' 指定したユーザーの最近の棋譜をmongodbに追加する．
 
     Example
     ----------
@@ -215,16 +221,15 @@ def set_kif_to_db(username, gtype='', max_iter=10):
     ## 棋譜のurlのリストを取得
     url_list = get_url_list(username, gtype=gtype, max_iter=max_iter)
 
-    ## mongoDB に追加
-    append_mongodb(url_list)
+    append_to_sqlite(url_list, dbpath)
     
 
-def get_tournament_users(title='meijin4', max_page=10):
-    u''' 
+def get_tournament_users(title, max_page=10):
+    ''' 
     Examples
     ----------
-    将棋ウォーズ聖帝戦に参加しているユーザーのidを取得する．
-    >>> get_tournament_users('seitei', max_page=100)
+    将棋ウォーズ第4回名人戦に参加しているユーザーのidを取得する．
+    >>> get_tournament_users('meijin4', max_page=100)
     '''
     page = 0
     base_url = 'http://shogiwars.heroz.jp/events/'
@@ -232,7 +237,7 @@ def get_tournament_users(title='meijin4', max_page=10):
 
     while True:
         url = ''.join([base_url, title, '?start=', str(page)])
-        html = get_html(url)
+        html = get_session(url).text
         _users = re.findall(r'\/users\/(\w+)',html)
 
         ## _usersが空でない場合追加．そうでなければbreak
@@ -249,7 +254,10 @@ def get_tournament_users(title='meijin4', max_page=10):
 
 if __name__ == '__main__':
 
+    dbpath = os.path.expanduser('~/data/sqlite3/shogiwars.sqlite3')
+
     ## 第4回名人戦で1〜100位になったプレーヤーの棋譜を取得する．
     t_users = get_tournament_users('meijin4', max_page=10)
+
     for _user in t_users:
-        set_kif_to_db(_user, gtype='s1', max_iter=10)
+        set_kif_to_db(dbpath, _user, gtype='s1', max_iter=100)
