@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-##--------------------------------------------------------------##
-## Filename: wars-an.py
-## Author  : tosh1ki
-## E-mail  : tosh1ki@yahoo.co.jp
-## Outline : 将棋ウォーズの棋譜取得,DB登録プログラム
-## Since   : 2014-10-24
-##--------------------------------------------------------------##
 
 import sys
 import urllib2
@@ -19,34 +12,27 @@ import pymongo
 
 
 INTERVAL_TIME = 5
+MAX_N_RETRY = 10
 WCSA_PATTERN = re.compile(r'(?<=receiveMove\(\").+(?=\"\);)')
 GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){.+?}', re.DOTALL)
 SUB_PATTERN = re.compile(r'\n\t\t(?P<key>\w+)(?=:)')
 
-def get_html(url):
-    u''' 指定したURLの指すHTMLファイルを取得して返す．
 
-    url=='' なら '' を返す．
-    5回リトライしてダメだったらエラーを吐いて死ぬ．
-    '''
-    if url == '':
-        return ''
+def get_session(url, params={}):
 
-    for i in range(5):
-        try:
-            time.sleep(INTERVAL_TIME)
-            response = urllib2.urlopen(url)
-        except:
-            print 'Error : urllib2.urlopen()'
-        else:
-            break
-    else:
-        sys.exit(1)
+    time.sleep(INTERVAL_TIME)
+    
+    for n in range(RETRY_MAX):
+        res = self.session.get(url, params=params)
+    
+        if res.status_code == 200:
+            return res
             
-    html = response.read()
-    response.close()
+        print('retry (get_session)')
+        time.sleep(10*n*SLEEP_TIME)
+    else:
+        sys.exit('Exceeded RETRY_MAX (get_sesion())')
 
-    return html
 
 def get_url_list(user, gtype='', max_iter=10):
     u''' 指定したユーザーの棋譜を取得する．
@@ -71,8 +57,8 @@ def get_url_list(user, gtype='', max_iter=10):
                        '?gtype=', str(gtype), 
                        '&start=', str(start)])
 
-        html = get_html(url)
-        soup = BeautifulSoup(html)
+        session = get_session(url)
+        soup = BeautifulSoup(session.text)
         url_list_tmp = [div.a['href'] 
                         for div in soup('div', {'class':'short_btn1'})]
 
@@ -233,7 +219,7 @@ def set_kif_to_db(username, gtype='', max_iter=10):
     append_mongodb(url_list)
     
 
-def get_tournament_users(title='seitei', max_page=10):
+def get_tournament_users(title='meijin4', max_page=10):
     u''' 
     Examples
     ----------
@@ -263,7 +249,7 @@ def get_tournament_users(title='seitei', max_page=10):
 
 if __name__ == '__main__':
 
-    ## 聖帝戦で1〜100位になったプレーヤーの棋譜を取得する．
-    t_users = get_tournament_users('seitei', max_page=1000)
+    ## 第4回名人戦で1〜100位になったプレーヤーの棋譜を取得する．
+    t_users = get_tournament_users('meijin4', max_page=10)
     for _user in t_users:
-        set_kif_to_db(_user, gtype='s1', max_iter=100)
+        set_kif_to_db(_user, gtype='s1', max_iter=10)
