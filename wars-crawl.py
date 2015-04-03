@@ -207,7 +207,7 @@ def append_to_sqlite(url_list, dbpath, reflesh=False):
 
 
 def set_kif_to_db(dbpath, username, gtype='', max_iter=10):
-    ''' 指定したユーザーの最近の棋譜をmongodbに追加する．
+    ''' 指定したユーザーの最近の棋譜をSQLiteに追加する．
 
     Example
     ----------
@@ -224,12 +224,13 @@ def set_kif_to_db(dbpath, username, gtype='', max_iter=10):
 
 
 def get_tournament_users(title, max_page=10):
-    ''' 
+    '''大会名を指定して，その大会の上位ユーザーのidを取ってくる
     Examples
     ----------
     将棋ウォーズ第4回名人戦に参加しているユーザーのidを取得する．
     >>> get_tournament_users('meijin4', max_page=100)
     '''
+
     page = 0
     base_url = 'http://shogiwars.heroz.jp/events/'
     results = []
