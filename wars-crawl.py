@@ -66,16 +66,14 @@ def get_url_list(user, gtype, max_iter=10):
                        '&start=', str(start)])
 
         text = get_session(url).text
-        text = session.text.encode('ISO-8859-1').decode('utf-8')
-        soup = BeautifulSoup(text)
-        url_list_tmp = [div.a['href'] 
-                        for div in soup('div', {'class':'short_btn1'})]
+        pattern = 'http://shogiwars.heroz.jp:3002/games/[\w\d_-]+'
+        match = re.findall(pattern, text)
 
-        ## listが空のとき
-        if not url_list_tmp :
+        # listが空のとき
+        if not match :
             break
 
-        url_list.extend(url_list_tmp)
+        url_list.extend(match)
         start += 10
         
         if start > max_iter:
@@ -97,7 +95,7 @@ def wcsa_to_csa(wars_csa, gtype):
 
     wcsa_list = re.split(r'[,\t]', wars_csa)
 
-    ## 1手も指さずに時間切れ or 接続切れ or 投了
+    # 1手も指さずに時間切れ or 接続切れ or 投了
     if wars_csa == '\tGOTE_WIN_TIMEOUT' or\
        wars_csa == '\tGOTE_WIN_DISCONNECT' or\
        wars_csa == '\tGOTE_WIN_TORYO':
@@ -119,8 +117,8 @@ def wcsa_to_csa(wars_csa, gtype):
 
     for i,w in enumerate(wcsa_list):
         if i%2==0:
-            ## 駒の動き，あるいは特殊な命令の処理
-            ## CAUTION: 仕様がわからないので全部網羅できているかわからない
+            # 駒の動き，あるいは特殊な命令の処理
+            # CAUTION: 仕様がわからないので全部網羅できているかわからない
             if w.find('TORYO') > 0 or w.find('DISCONNECT') > 0:
                 w_ap = '%TORYO'
             elif w.find('TIMEOUT') > 0:
@@ -134,12 +132,12 @@ def wcsa_to_csa(wars_csa, gtype):
 
         else:
             if (i-1)%4==0:
-                ## 先手の残り時間を計算
+                # 先手の残り時間を計算
                 sente_remain_time = int(w[1:])
                 _time = sente_prev_remain_time - sente_remain_time
                 sente_prev_remain_time = sente_remain_time
             else: 
-                ## 後手の残り時間を計算
+                # 後手の残り時間を計算
                 gote_remain_time = int(w[1:])
                 _time = gote_prev_remain_time - gote_remain_time
                 gote_prev_remain_time = gote_remain_time
@@ -154,12 +152,12 @@ def url_to_kifudata(url):
     '''
     html = get_session(url).text
     
-    ## 対局に関するデータの取得
+    # 対局に関するデータの取得
     res = re.findall(GAME_HEADER_PATTERN, html)[0]
     _dict = eval(re.sub(SUB_PATTERN,'"\g<key>"', res))
     _dict['user0'], _dict['user1'], _dict['date'] = _dict['name'].split('-')
 
-    ## 棋譜の取得
+    # 棋譜の取得
     wars_csa = re.findall(WCSA_PATTERN, html)[0]
     _dict['csa'] = wcsa_to_csa(wars_csa, _dict['gtype'])
 
@@ -176,7 +174,7 @@ def append_to_sqlite(url_list, dbpath, reflesh=False):
 
     id_pattern = re.compile(r'\w+-\w+-\w+')
 
-    ## connect to SQLite
+    # connect to SQLite
     con = connect_sqlite(dbpath)
 
     n_list = len(url_list)
@@ -190,15 +188,16 @@ def append_to_sqlite(url_list, dbpath, reflesh=False):
     ret_list = []
 
     for _url in url_list:
-        ## _url が空の場合はcontinue
+        # _url が空の場合はcontinue
         if not _url:
             continue
 
         _id = re.findall(id_pattern, _url)[0]
 
-        ## DB 内にあって，かつrefleshがfalseのときはcontinueする
-        if col.find({u'_id':_id}).count() > 0 and not reflesh:
-            continue
+        # # DB 内にあって，かつrefleshがfalseのときはcontinueする
+        # if not pd.read_csv('SELECT * FROM kifu WHERE _id=='+_id, con).empty 
+        # and not reflesh:
+        #     continue
 
         ret_list.append(url_to_kifudata(_url))
 
@@ -218,7 +217,7 @@ def set_kif_to_db(dbpath, username, gtype='', max_iter=10):
 
     >>> set_kif_to_db(username, gtype=gtype, max_iter=10)
     '''
-    ## 棋譜のurlのリストを取得
+    # 棋譜のurlのリストを取得
     url_list = get_url_list(username, gtype=gtype, max_iter=max_iter)
 
     append_to_sqlite(url_list, dbpath)
@@ -240,7 +239,7 @@ def get_tournament_users(title, max_page=10):
         html = get_session(url).text
         _users = re.findall(r'\/users\/(\w+)',html)
 
-        ## _usersが空でない場合追加．そうでなければbreak
+        # _usersが空でない場合追加．そうでなければbreak
         if _users:
             results.extend(_users)
             page += 25
@@ -256,8 +255,8 @@ if __name__ == '__main__':
 
     dbpath = os.path.expanduser('~/data/sqlite3/shogiwars.sqlite3')
 
-    ## 第4回名人戦で1〜100位になったプレーヤーの棋譜を取得する．
+    # 第4回名人戦で1〜100位になったプレーヤーの棋譜を取得する．
     t_users = get_tournament_users('meijin4', max_page=10)
 
     for _user in t_users:
-        set_kif_to_db(dbpath, _user, gtype='s1', max_iter=100)
+        set_kif_to_db(dbpath, _user, gtype='s1', max_iter=10)
