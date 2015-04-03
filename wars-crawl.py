@@ -23,15 +23,15 @@ SUB_PATTERN = re.compile(r'\n\t\t(?P<key>\w+)(?=:)')
 def get_session(url, params={}):
 
     time.sleep(INTERVAL_TIME)
-    
+
     for n in range(MAX_N_RETRY):
         res = requests.session().get(url, params=params)
-    
+
         if res.status_code == 200:
             return res
-            
+
         print('retry (get_session)')
-        time.sleep(10*n*SLEEP_TIME)
+        time.sleep(10 * n * SLEEP_TIME)
     else:
         sys.exit('Exceeded MAX_N_RETRY (get_sesion())')
 
@@ -61,8 +61,8 @@ def get_url_list(user, gtype, max_iter=10):
     start = 1
 
     while True:
-        url = ''.join([base_url, user, 
-                       '?gtype=', str(gtype), 
+        url = ''.join([base_url, user,
+                       '?gtype=', str(gtype),
                        '&start=', str(start)])
 
         text = get_session(url).text
@@ -70,14 +70,14 @@ def get_url_list(user, gtype, max_iter=10):
         match = re.findall(pattern, text)
 
         # listが空のとき
-        if not match :
+        if not match:
             break
 
         url_list.extend(match)
         start += 10
-        
+
         if start > max_iter:
-            break 
+            break
 
     return url_list
 
@@ -101,13 +101,13 @@ def wcsa_to_csa(wars_csa, gtype):
        wars_csa == '\tGOTE_WIN_TORYO':
         return '%TIME_UP'
 
-    if gtype == '': 
-        max_time = 60*10
-    elif gtype == 'sb': 
-        max_time = 60*3
-    elif gtype == 's1': 
+    if gtype == '':
+        max_time = 60 * 10
+    elif gtype == 'sb':
+        max_time = 60 * 3
+    elif gtype == 's1':
         max_time = 3600
-    else: 
+    else:
         print('Error: gtypeに不正な値; gtype={0}'.format(gtype))
 
     sente_prev_remain_time = max_time
@@ -115,8 +115,8 @@ def wcsa_to_csa(wars_csa, gtype):
 
     results = []
 
-    for i,w in enumerate(wcsa_list):
-        if i%2==0:
+    for i, w in enumerate(wcsa_list):
+        if i % 2 == 0:
             # 駒の動き，あるいは特殊な命令の処理
             # CAUTION: 仕様がわからないので全部網羅できているかわからない
             if w.find('TORYO') > 0 or w.find('DISCONNECT') > 0:
@@ -131,12 +131,12 @@ def wcsa_to_csa(wars_csa, gtype):
             results.append(w_ap)
 
         else:
-            if (i-1)%4==0:
+            if (i - 1) % 4 == 0:
                 # 先手の残り時間を計算
                 sente_remain_time = int(w[1:])
                 _time = sente_prev_remain_time - sente_remain_time
                 sente_prev_remain_time = sente_remain_time
-            else: 
+            else:
                 # 後手の残り時間を計算
                 gote_remain_time = int(w[1:])
                 _time = gote_prev_remain_time - gote_remain_time
@@ -151,10 +151,10 @@ def url_to_kifudata(url):
     ''' urlが指す棋譜とそれに関する情報を辞書にまとめて返す．
     '''
     html = get_session(url).text
-    
+
     # 対局に関するデータの取得
     res = re.findall(GAME_HEADER_PATTERN, html)[0]
-    _dict = eval(re.sub(SUB_PATTERN,'"\g<key>"', res))
+    _dict = eval(re.sub(SUB_PATTERN, '"\g<key>"', res))
     _dict['user0'], _dict['user1'], _dict['date'] = _dict['name'].split('-')
 
     # 棋譜の取得
@@ -194,8 +194,8 @@ def append_to_sqlite(url_list, dbpath, reflesh=False):
 
         _id = re.findall(id_pattern, _url)[0]
 
-        # # DB 内にあって，かつrefleshがfalseのときはcontinueする
-        # if not pd.read_csv('SELECT * FROM kifu WHERE _id=='+_id, con).empty 
+        # DB 内にあって，かつrefleshがfalseのときはcontinueする
+        # if not pd.read_csv('SELECT * FROM kifu WHERE _id=='+_id, con).empty
         # and not reflesh:
         #     continue
 
@@ -221,7 +221,7 @@ def set_kif_to_db(dbpath, username, gtype='', max_iter=10):
     url_list = get_url_list(username, gtype=gtype, max_iter=max_iter)
 
     append_to_sqlite(url_list, dbpath)
-    
+
 
 def get_tournament_users(title, max_page=10):
     ''' 
@@ -237,7 +237,7 @@ def get_tournament_users(title, max_page=10):
     while True:
         url = ''.join([base_url, title, '?start=', str(page)])
         html = get_session(url).text
-        _users = re.findall(r'\/users\/(\w+)',html)
+        _users = re.findall(r'\/users\/(\w+)', html)
 
         # _usersが空でない場合追加．そうでなければbreak
         if _users:
@@ -245,7 +245,7 @@ def get_tournament_users(title, max_page=10):
             page += 25
         else:
             break
-        
+
         if page >= max_page:
             break
 
