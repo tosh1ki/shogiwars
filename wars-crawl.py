@@ -31,7 +31,7 @@ def get_session(url, params={}):
             return res
 
         print('retry (get_session)')
-        time.sleep(10 * n * SLEEP_TIME)
+        time.sleep(10 * n * INTERVAL_TIME)
     else:
         sys.exit('Exceeded MAX_N_RETRY (get_sesion())')
 
@@ -96,9 +96,9 @@ def wcsa_to_csa(wars_csa, gtype):
     wcsa_list = re.split(r'[,\t]', wars_csa)
 
     # 1手も指さずに時間切れ or 接続切れ or 投了
-    if wars_csa == '\tGOTE_WIN_TIMEOUT' or\
-       wars_csa == '\tGOTE_WIN_DISCONNECT' or\
-       wars_csa == '\tGOTE_WIN_TORYO':
+    if (wars_csa == '\tGOTE_WIN_TIMEOUT' or
+        wars_csa == '\tGOTE_WIN_DISCONNECT' or
+        wars_csa == '\tGOTE_WIN_TORYO'):
         return '%TIME_UP'
 
     if gtype == '':
@@ -225,6 +225,7 @@ def set_kif_to_db(dbpath, username, gtype='', max_iter=10):
 
 def get_tournament_users(title, max_page=10):
     '''大会名を指定して，その大会の上位ユーザーのidを取ってくる
+
     Examples
     ----------
     将棋ウォーズ第4回名人戦に参加しているユーザーのidを取得する．
