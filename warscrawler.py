@@ -22,8 +22,9 @@ GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){.+?}', re.DOTALL)
 
 
 class WarsCrawler:
+
     '''将棋ウォーズ用のクローラー
-    
+
     Args
     ----------
     dbpath : string
@@ -99,7 +100,7 @@ class WarsCrawler:
         res = re.findall(GAME_HEADER_PATTERN, html)[0]
 
         # keyがquoteされていないので対処する
-        d = yaml.load(re.sub('[{}\t,]', ' ', res))  
+        d = yaml.load(re.sub('[{}\t,]', ' ', res))
 
         d['user0'], d['user1'], d['date'] = d['name'].split('-')
         wars_csa = re.findall(WCSA_PATTERN, html)[0]
@@ -108,10 +109,10 @@ class WarsCrawler:
         d['datetime'] = dt.datetime.strptime(d['date'], '%Y%m%d_%H%M%S')
 
         return d
-    
+
     def get_all_kifu(self, csvpath):
         ''' url_list 中の url の指す棋譜を取得，SQLiteに追加．
-        
+
         Args
         ----------
         csvpath: string
@@ -128,12 +129,12 @@ class WarsCrawler:
         sys.stdout.flush()
 
         df = pd.DataFrame()
-        
+
         for _url in url_list:
             kifu = self.get_kifu(_url)
             df = df.append(kifu, ignore_index=True)
-            
-            df_crawled.loc[df_crawled.url==_url, 'crawled'] = 1
+
+            df_crawled.loc[df_crawled.url == _url, 'crawled'] = 1
             df_crawled.to_csv(csvpath, index=False)
 
         if not df.empty:
@@ -144,7 +145,7 @@ class WarsCrawler:
 
     def get_users(self, title, max_page=10):
         '''大会名を指定して，その大会の上位ユーザーのidを取ってくる
-        
+
         Examples
         ----------
         将棋ウォーズ第4回名人戦に参加しているユーザーのidを取得する．
@@ -158,7 +159,7 @@ class WarsCrawler:
             _url = url.format(title=title, page=page)
             html = self.get_html(_url)
             _users = re.findall(r'\/users\/(\w+)', html)
-            
+
             # _usersが空でない場合追加．そうでなければbreak
             if _users:
                 results.extend(_users)
@@ -199,7 +200,7 @@ class WarsCrawler:
 
     def wcsa_to_csa(self, wars_csa, gtype):
         '''将棋ウォーズ専用?のCSA形式を一般のCSA形式に変換する．
-        
+
         Args
         ----------
         wars_csa
@@ -212,11 +213,11 @@ class WarsCrawler:
         time_up = ['\tGOTE_WIN_TIMEOUT',
                    '\tGOTE_WIN_DISCONNECT',
                    '\tGOTE_WIN_TORYO']
-        
+
         if wars_csa in time_up:
             # 1手も指さずに時間切れ or 接続切れ or 投了
             return '%TIME_UP'
-            
+
         if gtype == gtype_dict['10m']:
             max_time = 60 * 10
         elif gtype == gtype_dict['3m']:
@@ -257,7 +258,7 @@ class WarsCrawler:
                     gote_remain_time = int(w[1:])
                     _time = gote_prev_remain_time - gote_remain_time
                     gote_prev_remain_time = gote_remain_time
-                    
+
                 results.append('T' + str(_time))
 
         return '\n'.join(results)
