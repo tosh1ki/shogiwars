@@ -3,6 +3,7 @@
 
 
 import re
+import yaml
 import sys
 import time
 import sqlite3
@@ -10,6 +11,8 @@ import requests
 import datetime as dt
 import pandas as pd
 from bs4 import BeautifulSoup
+
+import pdb
 
 
 gtype_dict = {'10m': '', '3m': 'sb', '10s': 's1'}
@@ -37,29 +40,27 @@ class WarsCrawler:
         self.INTERVAL_TIME = interval
         self.MAX_N_RETRY = n_retry
 
+        # SQLiteに接続する
+        self.con = sqlite3.connect(self.dbpath)
+        self.con.text_factory = str
+
     def get_html(self, url, params={}):
         '''指定したurlのhtmlを取得する
         '''
-
         time.sleep(self.INTERVAL_TIME)
 
         for n in range(self.MAX_N_RETRY):
-            res = requests.session().get(url, params=params)
+            session = requests.session()
+            res = session.get(url, params=params)
 
             if res.status_code == 200:
                 return res.text
-
-            print('retry (WarsCrawler.get_html())')
-            time.sleep(10 * n * self.INTERVAL_TIME)
+            else:
+                print('retry (WarsCrawler.get_html())')
+                sys.stdout.flush()
+                time.sleep(10 * n * self.INTERVAL_TIME)
         else:
             sys.exit('Exceeded MAX_N_RETRY (WarsCrawler.get_html())')
-
-    def connect_sqlite(self):
-        '''SQLiteに接続する
-        '''
-        con = sqlite3.connect(self.dbpath)
-        con.text_factory = str
-        return con
 
     def get_url_list(self, user, gtype, max_iter=10):
         ''' 指定したユーザーの棋譜を取得する．
@@ -77,26 +78,95 @@ class WarsCrawler:
 
         url_list = []
         start = 1
-
-        url = (
-            'http://shogiwars.heroz.jp/users/history/'
-            '{user}?gtype={gtype}&start={start}'
-        )
+        url = ('http://shogiwars.heroz.jp/users/history/'
+               '{user}?gtype={gtype}&start={start}')
+        pattern = 'http://shogiwars.heroz.jp:3002/games/[\w\d_-]+'
 
         while start <= max_iter:
             url = url.format(user=user, gtype=gtype, start=start)
             text = self.get_html(url)
-            pattern = 'http://shogiwars.heroz.jp:3002/games/[\w\d_-]+'
             match = re.findall(pattern, text)
 
-            # listが空のとき
-            if not match:
+            if match:
+                url_list.extend(match)
+                start += len(match)
+            else:
                 break
 
-            url_list.extend(match)
-            start += len(match)
-
         return url_list
+
+    def url_to_kifudata(self, url):
+        ''' urlが指す棋譜とそれに関する情報を辞書にまとめて返す．
+        '''
+        html = self.get_html(url)
+        res = re.findall(GAME_HEADER_PATTERN, html)[0]
+
+        # keyがquoteされていないので対処する
+        d = yaml.load(re.sub('[{}\t,]', ' ', res))  
+
+        d['user0'], d['user1'], d['date'] = d['name'].split('-')
+        wars_csa = re.findall(WCSA_PATTERN, html)[0]
+        d['wcsa'] = wars_csa
+        d['csa'] = self.wcsa_to_csa(wars_csa, d['gtype'])
+        d['datetime'] = dt.datetime.strptime(d['date'], '%Y%m%d_%H%M%S')
+
+        return d
+    
+    def append_to_sqlite(self, url_list, reflesh=False):
+        ''' url_list 中の url の指す棋譜を取得してCSA形式に変換，SQLiteに追加．
+        '''
+
+        id_pattern = re.compile(r'\w+-\w+-\w+')
+                
+        n_list = len(url_list)
+        sec = n_list * self.INTERVAL_TIME
+        finish_time = dt.datetime.now() + dt.timedelta(seconds=sec)
+        
+        print('{0}件の棋譜'.format(n_list))
+        print('棋譜収集終了予定時刻 : {0}'.format(finish_time))
+        sys.stdout.flush()
+
+        ret_list = []
+        
+        for _url in url_list:
+            # _url が空の場合はcontinue
+            if not _url:
+                continue
+
+            _id = re.findall(id_pattern, _url)[0]
+            
+            ret_list.append(self.url_to_kifudata(_url))
+
+        df = pd.DataFrame(ret_list)
+        if not df.empty:
+            df.to_sql('kifu', self.con, index=False, if_exists='append')
+
+    def get_tournament_users(self, title, max_page=10):
+        '''大会名を指定して，その大会の上位ユーザーのidを取ってくる
+        
+        Examples
+        ----------
+        将棋ウォーズ第4回名人戦に参加しているユーザーのidを取得する．
+        >>> get_tournament_users('meijin4', max_page=100)
+        '''
+
+        page = 0
+        url = 'http://shogiwars.heroz.jp/events/{title}?start={page}'
+        results = []
+
+        while page < max_page:
+            _url = url.format(title=title, page=page)
+            html = self.get_html(_url)
+            _users = re.findall(r'\/users\/(\w+)', html)
+            
+            # _usersが空でない場合追加．そうでなければbreak
+            if _users:
+                results.extend(_users)
+                page += 25
+            else:
+                break
+
+        return results
 
     def wcsa_to_csa(self, wars_csa, gtype):
         ''' 将棋ウォーズ専用?のCSA形式を一般のCSA形式に変換する．
@@ -163,100 +233,3 @@ class WarsCrawler:
                 results.append('T' + str(_time))
 
         return '\n'.join(results)
-
-
-    def url_to_kifudata(self, url):
-        ''' urlが指す棋譜とそれに関する情報を辞書にまとめて返す．
-        '''
-        html = self.get_html(url)
-        
-        # 対局に関するデータの取得
-        res = re.findall(GAME_HEADER_PATTERN, html)[0]
-        _dict = eval(re.sub(SUB_PATTERN, '"\g<key>"', res))
-        _dict['user0'], _dict['user1'], _dict['date'] = _dict['name'].split('-')
-
-        # 棋譜の取得
-        wars_csa = re.findall(WCSA_PATTERN, html)[0]
-        _dict['csa'] = self.wcsa_to_csa(wars_csa, _dict['gtype'])
-        
-        _dict['datetime'] = dt.datetime.strptime(
-            _dict['date'], '%Y%m%d_%H%M%S')
-        _dict['_id'] = _dict.pop('name')
-        _dict['wcsa'] = wars_csa
-
-        return _dict
-    
-    def append_to_sqlite(self, url_list, reflesh=False):
-        ''' url_list 中の url の指す棋譜を取得してCSA形式に変換，SQLiteに追加．
-        '''
-
-        id_pattern = re.compile(r'\w+-\w+-\w+')
-        
-        # connect to SQLite
-        con = self.connect_sqlite()
-        
-        n_list = len(url_list)
-        sec = n_list * self.INTERVAL_TIME
-        finish_time = dt.datetime.now() + dt.timedelta(seconds=sec)
-        
-        print('{0}件の棋譜'.format(n_list))
-        print('棋譜収集終了予定時刻 : {0}'.format(finish_time))
-        sys.stdout.flush()
-
-        ret_list = []
-        
-        for _url in url_list:
-            # _url が空の場合はcontinue
-            if not _url:
-                continue
-
-            _id = re.findall(id_pattern, _url)[0]
-            
-            ret_list.append(self.url_to_kifudata(_url))
-
-        df = pd.DataFrame(ret_list)
-        if not df.empty:
-            df.to_sql('kifu', con, index=False, if_exists='append')
-
-    def set_kif_to_db(self, username, gtype='', max_iter=10):
-        ''' 指定したユーザーの最近の棋譜をSQLiteに追加する．
-
-        Example
-        ----------
-        >>> username = '1_tsutsukana'
-        >>> gtype = 's1'
-        >>> max_iter = 100
-        
-        >>> set_kif_to_db(username, gtype=gtype, max_iter=10)
-        '''
-        # 棋譜のurlのリストを取得
-        url_list = self.get_url_list(username, gtype=gtype, max_iter=max_iter)
-
-        self.append_to_sqlite(url_list)
-
-    def get_tournament_users(self, title, max_page=10):
-        '''大会名を指定して，その大会の上位ユーザーのidを取ってくる
-        
-        Examples
-        ----------
-        将棋ウォーズ第4回名人戦に参加しているユーザーのidを取得する．
-        >>> get_tournament_users('meijin4', max_page=100)
-        '''
-
-        page = 0
-        url = 'http://shogiwars.heroz.jp/events/{title}?start={page}'
-        results = []
-
-        while page < max_page:
-            _url = url.format(title=title, page=page)
-            html = self.get_html(_url)
-            _users = re.findall(r'\/users\/(\w+)', html)
-            
-            # _usersが空でない場合追加．そうでなければbreak
-            if _users:
-                results.extend(_users)
-                page += 25
-            else:
-                break
-
-        return results
