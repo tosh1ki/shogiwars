@@ -22,7 +22,6 @@ GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){.+?}', re.DOTALL)
 
 
 class WarsCrawler:
-
     '''将棋ウォーズ用のクローラー
 
     Args
@@ -119,7 +118,14 @@ class WarsCrawler:
             クロールするurlの入っているcsvのパス
         '''
         df_crawled = pd.read_csv(csvpath, index_col=0)
-        url_list = list(df_crawled.query('crawled==0').url)
+
+        not_crawled = df_crawled.query('crawled==0')
+
+        if not_crawled.empty:
+            print('{0}のファイルは全て取得済み'.format(csvpath))
+            return None
+
+        url_list = list(not_crawled.url)
         sec = len(url_list) * self.INTERVAL_TIME
         finish_time = dt.datetime.now() + dt.timedelta(seconds=sec)
 
