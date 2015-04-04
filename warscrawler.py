@@ -50,7 +50,7 @@ class WarsCrawler:
         time.sleep(self.INTERVAL_TIME)
 
         for n in range(self.MAX_N_RETRY):
-            res = requests.session().get(url, params=params)
+            res = requests.session().get(url)
 
             if res.status_code == 200:
                 return res.text
@@ -124,7 +124,7 @@ class WarsCrawler:
         finish_time = dt.datetime.now() + dt.timedelta(seconds=sec)
 
         # 途中経過の表示
-        print('{0}件の棋譜'.format(n_list))
+        print('{0}件の棋譜'.format(len(url_list)))
         print('棋譜収集終了予定時刻 : {0}'.format(finish_time))
         sys.stdout.flush()
 
@@ -188,8 +188,6 @@ class WarsCrawler:
         for _user in users:
             _url_list = self.get_url(_user, gtype=gtype, max_iter=max_iter)
             url_list.extend(_url_list)
-
-            break  # for debug
 
         df = pd.DataFrame(url_list)
         df.ix[:, 1] = 0
