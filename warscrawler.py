@@ -129,13 +129,9 @@ class WarsCrawler:
         ret_list = []
         
         for _url in url_list:
-            # _url が空の場合はcontinue
-            if not _url:
-                continue
-
-            _id = re.findall(id_pattern, _url)[0]
-            
-            ret_list.append(self.url_to_kifudata(_url))
+            if _url:
+                _id = re.findall(id_pattern, _url)[0]
+                ret_list.append(self.url_to_kifudata(_url))
 
         df = pd.DataFrame(ret_list)
         if not df.empty:
@@ -167,6 +163,21 @@ class WarsCrawler:
                 break
 
         return results
+
+    def get_kifu_url_list(self, users, gtype, csvpath, max_iter=10):
+        url_list = []
+
+        for _user in users:
+            _url_list = self.get_url_list(_user, 
+                                          gtype=gtype, max_iter=max_iter)
+            url_list.extend(_url_list)
+
+        df = pd.DataFrame(url_list)
+        df.ix[:, 1] = 0
+        df.columns = ['url', 'crawled']
+        df.to_csv(csvpath)
+
+        return df
 
     def wcsa_to_csa(self, wars_csa, gtype):
         ''' 将棋ウォーズ専用?のCSA形式を一般のCSA形式に変換する．
