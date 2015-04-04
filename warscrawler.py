@@ -19,7 +19,6 @@ gtype_dict = {'10m': '', '3m': 'sb', '10s': 's1'}
 
 WCSA_PATTERN = re.compile(r'(?<=receiveMove\(\").+(?=\"\);)')
 GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){.+?}', re.DOTALL)
-SUB_PATTERN = re.compile(r'\n\t\t(?P<key>\w+)(?=:)')
 
 
 class WarsCrawler:
@@ -44,14 +43,13 @@ class WarsCrawler:
         self.con = sqlite3.connect(self.dbpath)
         self.con.text_factory = str
 
-    def get_html(self, url, params={}):
+    def get_html(self, url):
         '''指定したurlのhtmlを取得する
         '''
         time.sleep(self.INTERVAL_TIME)
 
         for n in range(self.MAX_N_RETRY):
-            session = requests.session()
-            res = session.get(url, params=params)
+            res = requests.session().get(url, params=params)
 
             if res.status_code == 200:
                 return res.text
@@ -62,20 +60,19 @@ class WarsCrawler:
         else:
             sys.exit('Exceeded MAX_N_RETRY (WarsCrawler.get_html())')
 
-    def get_url_list(self, user, gtype, max_iter=10):
+    def get_url(self, user, gtype, max_iter=10):
         ''' 指定したユーザーの棋譜を取得する．
 
         Args
         ----------
-        user
-            User name (string)
-        gtype
-            Kifu type (string)
-        max_iter
+        user: string
+            User name
+        gtype: string
+            Kifu type
+        max_iter: int, optional (default=10)
             取得する最大数．
             10個ずつ取得するたびに判定しており厳密には守るつもりはない．
         '''
-
         url_list = []
         start = 1
         url = ('http://shogiwars.heroz.jp/users/history/'
@@ -95,7 +92,7 @@ class WarsCrawler:
 
         return url_list
 
-    def url_to_kifudata(self, url):
+    def get_kifu(self, url):
         ''' urlが指す棋譜とそれに関する情報を辞書にまとめて返す．
         '''
         html = self.get_html(url)
@@ -112,40 +109,47 @@ class WarsCrawler:
 
         return d
     
-    def append_to_sqlite(self, url_list, reflesh=False):
-        ''' url_list 中の url の指す棋譜を取得してCSA形式に変換，SQLiteに追加．
-        '''
-
-        id_pattern = re.compile(r'\w+-\w+-\w+')
-                
-        n_list = len(url_list)
-        sec = n_list * self.INTERVAL_TIME
-        finish_time = dt.datetime.now() + dt.timedelta(seconds=sec)
+    def get_all_kifu(self, csvpath):
+        ''' url_list 中の url の指す棋譜を取得，SQLiteに追加．
         
+        Args
+        ----------
+        csvpath: string
+            クロールするurlの入っているcsvのパス
+        '''
+        df_crawled = pd.read_csv(csvpath, index_col=0)
+        url_list = list(df_crawled.query('crawled==0').url)
+        sec = len(url_list) * self.INTERVAL_TIME
+        finish_time = dt.datetime.now() + dt.timedelta(seconds=sec)
+
+        # 途中経過の表示
         print('{0}件の棋譜'.format(n_list))
         print('棋譜収集終了予定時刻 : {0}'.format(finish_time))
         sys.stdout.flush()
 
-        ret_list = []
+        df = pd.DataFrame()
         
         for _url in url_list:
-            if _url:
-                _id = re.findall(id_pattern, _url)[0]
-                ret_list.append(self.url_to_kifudata(_url))
+            kifu = self.get_kifu(_url)
+            df = df.append(kifu, ignore_index=True)
+            
+            df_crawled.loc[df_crawled.url==_url, 'crawled'] = 1
+            df_crawled.to_csv(csvpath, index=False)
 
-        df = pd.DataFrame(ret_list)
         if not df.empty:
             df.to_sql('kifu', self.con, index=False, if_exists='append')
+            return df
+        else:
+            return None
 
-    def get_tournament_users(self, title, max_page=10):
+    def get_users(self, title, max_page=10):
         '''大会名を指定して，その大会の上位ユーザーのidを取ってくる
         
         Examples
         ----------
         将棋ウォーズ第4回名人戦に参加しているユーザーのidを取得する．
-        >>> get_tournament_users('meijin4', max_page=100)
+        >>> wcrawler.get_users('meijin4', max_page=100)
         '''
-
         page = 0
         url = 'http://shogiwars.heroz.jp/events/{title}?start={page}'
         results = []
@@ -164,13 +168,27 @@ class WarsCrawler:
 
         return results
 
-    def get_kifu_url_list(self, users, gtype, csvpath, max_iter=10):
+    def get_kifu_url(self, users, gtype, csvpath, max_iter=10):
+        '''ユーザー名とgtypeを指定して棋譜のurlを取得する．
+
+        Args
+        ----------
+        users: string
+            ユーザー名
+        gtype: string
+            gtype
+        csvpath: string
+            棋譜のurlを保存するCSVファイルのパス
+        max_iter: string, optional (default=10)
+            最大試行回数
+        '''
         url_list = []
 
         for _user in users:
-            _url_list = self.get_url_list(_user, 
-                                          gtype=gtype, max_iter=max_iter)
+            _url_list = self.get_url(_user, gtype=gtype, max_iter=max_iter)
             url_list.extend(_url_list)
+
+            break  # for debug
 
         df = pd.DataFrame(url_list)
         df.ix[:, 1] = 0
@@ -180,7 +198,7 @@ class WarsCrawler:
         return df
 
     def wcsa_to_csa(self, wars_csa, gtype):
-        ''' 将棋ウォーズ専用?のCSA形式を一般のCSA形式に変換する．
+        '''将棋ウォーズ専用?のCSA形式を一般のCSA形式に変換する．
         
         Args
         ----------
@@ -189,7 +207,6 @@ class WarsCrawler:
         gtype
             処理したい棋譜のgtype
         '''
-
         wcsa_list = re.split(r'[,\t]', wars_csa)
 
         time_up = ['\tGOTE_WIN_TIMEOUT',

@@ -3,7 +3,6 @@
 
 
 import os
-import pandas as pd
 from warscrawler import *
 
 
@@ -14,10 +13,7 @@ if __name__ == '__main__':
     wcrawler = WarsCrawler(dbpath, 10, 10)
 
     # 第4回名人戦で1〜100位になったプレーヤーの棋譜を取得する．
-    t_users = wcrawler.get_tournament_users('meijin4', max_page=1)
-
-    csvpath = 'urllist.csv'
-    df = wcrawler.get_kifu_url_list(t_users, gtype, csvpath)
-
-    for d in df.values:
-#    wcrawler.append_to_sqlite(url_list)
+    csvpath = 'crawled.csv'
+    t_users = wcrawler.get_users('meijin4', max_page=1)
+    df_url = wcrawler.get_kifu_url(t_users, gtype, csvpath)
+    df_kifu = wcrawler.get_all_kifu(csvpath)
