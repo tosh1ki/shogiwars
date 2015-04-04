@@ -23,7 +23,7 @@ class WarsCrawler:
     '''将棋ウォーズ用のクローラー
     
     Args
-    ============
+    ----------
     dbpath : string
         SQLiteのパス
     interval : int, optional (default = 10)
@@ -33,12 +33,13 @@ class WarsCrawler:
     '''
 
     def __init__(self, dbpath, interval=10, n_retry=10):
-
         self.dbpath = dbpath
         self.INTERVAL_TIME = interval
         self.MAX_N_RETRY = n_retry
 
     def get_html(self, url, params={}):
+        '''指定したurlのhtmlを取得する
+        '''
 
         time.sleep(self.INTERVAL_TIME)
 
@@ -54,6 +55,8 @@ class WarsCrawler:
             sys.exit('Exceeded MAX_N_RETRY (WarsCrawler.get_html())')
 
     def connect_sqlite(self):
+        '''SQLiteに接続する
+        '''
         con = sqlite3.connect(self.dbpath)
         con.text_factory = str
         return con
@@ -61,7 +64,7 @@ class WarsCrawler:
     def get_url_list(self, user, gtype, max_iter=10):
         ''' 指定したユーザーの棋譜を取得する．
 
-        Parameters
+        Args
         ----------
         user
             User name (string)
@@ -98,7 +101,7 @@ class WarsCrawler:
     def wcsa_to_csa(self, wars_csa, gtype):
         ''' 将棋ウォーズ専用?のCSA形式を一般のCSA形式に変換する．
         
-        Parameters
+        Args
         ----------
         wars_csa
             将棋ウォーズ特有のCSA形式で表された棋譜の文字列
@@ -244,7 +247,7 @@ class WarsCrawler:
         url = 'http://shogiwars.heroz.jp/events/{title}?start={page}'
         results = []
 
-        while True:
+        while page < max_page:
             _url = url.format(title=title, page=page)
             html = self.get_html(_url)
             _users = re.findall(r'\/users\/(\w+)', html)
@@ -254,9 +257,6 @@ class WarsCrawler:
                 results.extend(_users)
                 page += 25
             else:
-                break
-
-            if page >= max_page:
                 break
 
         return results
