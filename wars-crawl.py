@@ -22,20 +22,18 @@ SUB_PATTERN = re.compile(r'\n\t\t(?P<key>\w+)(?=:)')
 
 class WarsCrawler:
     '''将棋ウォーズ用のクローラー
+    
+    Args
+    ============
+    dbpath : string
+        SQLiteのパス
+    interval : int, optional (default = 10)
+        取得時の時間間隔
+    n_retry : int, optional (default = 10)
+        取得時の再試行の回数のmax
     '''
 
     def __init__(self, dbpath, interval=10, n_retry=10):
-        '''
-
-        Args
-        ============
-        dbpath : string
-            SQLiteのパス
-        interval : int, optional (default = 10)
-            取得時の時間間隔
-        n_retry : int, optional (default = 10)
-            取得時の再試行の回数のmax
-        '''
 
         self.dbpath = dbpath
         self.INTERVAL_TIME = interval
@@ -187,7 +185,7 @@ class WarsCrawler:
         return _dict
     
     def append_to_sqlite(self, url_list, reflesh=False):
-        ''' url_list 中の url の指す棋譜を取得してCSA形式に変換，mongoDBに追加．
+        ''' url_list 中の url の指す棋譜を取得してCSA形式に変換，SQLiteに追加．
         '''
 
         id_pattern = re.compile(r'\w+-\w+-\w+')
@@ -212,11 +210,6 @@ class WarsCrawler:
 
             _id = re.findall(id_pattern, _url)[0]
             
-            # DB 内にあって，かつrefleshがfalseのときはcontinueする
-            # if not pd.read_csv('SELECT * FROM kifu WHERE _id=='+_id, con).empty
-            # and not reflesh:
-            #     continue
-
             ret_list.append(self.url_to_kifudata(_url))
 
         df = pd.DataFrame(ret_list)
