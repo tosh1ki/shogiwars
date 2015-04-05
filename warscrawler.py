@@ -109,8 +109,8 @@ class WarsCrawler:
         d['user0'], d['user1'], d['date'] = d['name'].split('-')
         wars_csa = re.findall(WCSA_PATTERN, html)[0]
         d['wcsa'] = wars_csa
-        d['csa'] = self.wcsa_to_csa(wars_csa, d['gtype'])
         d['datetime'] = dt.datetime.strptime(d['date'], '%Y%m%d_%H%M%S')
+        d['csa'] = self.wcsa_to_csa(d)
 
         return d
 
@@ -207,7 +207,7 @@ class WarsCrawler:
 
         return df
 
-    def wcsa_to_csa(self, wars_csa, gtype):
+    def wcsa_to_csa(self, d):
         '''将棋ウォーズ専用?のCSA形式を一般のCSA形式に変換する．
 
         Args
@@ -217,29 +217,45 @@ class WarsCrawler:
         gtype
             処理したい棋譜のgtype
         '''
-        wcsa_list = re.split(r'[,\t]', wars_csa)
+        wcsa_list = re.split(r'[,\t]', d['wcsa'])
 
         time_up = ['\tGOTE_WIN_TIMEOUT',
                    '\tGOTE_WIN_DISCONNECT',
                    '\tGOTE_WIN_TORYO']
 
-        if wars_csa in time_up:
+        if d['wcsa'] in time_up:
             # 1手も指さずに時間切れ or 接続切れ or 投了
             return '%TIME_UP'
 
-        if gtype == gtype_dict['10m']:
+        if d['gtype'] == gtype_dict['10m']:
             max_time = 60 * 10
-        elif gtype == gtype_dict['3m']:
+            rule = '\'持ち時間:10分、切れ負け'
+            time_limit = '$TIME_LIMIT:00:10+00'
+        elif d['gtype'] == gtype_dict['3m']:
             max_time = 60 * 3
-        elif gtype == gtype_dict['10s']:
+            rule = '\'持ち時間:3分、切れ負け'
+            time_limit = '$TIME_LIMIT:00:03+00'
+        elif d['gtype'] == gtype_dict['10s']:
             max_time = 3600
+            rule = '\'初手から10秒'
+            time_limit = '$TIME_LIMIT:00:00+10'
         else:
-            print('Error: gtypeに不正な値; gtype={0}'.format(gtype))
+            print('Error: gtypeに不正な値; gtype={0}'.format(d['gtype']))
 
         sente_prev_remain_time = max_time
         gote_prev_remain_time = max_time
 
-        results = []
+        results = [
+            '\'バージョン', 'V2.2',
+            '\'対局者名', 'N+', d['user0'], 'N-', d['user1'],
+            '\'棋譜情報', '\'棋戦名', '$EVENT:', '将棋ウォーズ',
+            '\'対局場所', '$SITE:shogiwars.heroz.jp',
+            '\'開始日時', 
+            '$START_TIME:' + d['datetime'].strftime('%Y/%m/%d %H:%M:%S'),
+            rule, time_limit,
+            '\'先手番', '+',
+            '\'指し手と消費時間'
+        ]
 
         for i, w in enumerate(wcsa_list):
             if i % 2 == 0:
