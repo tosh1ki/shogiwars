@@ -49,14 +49,19 @@ class WarsCrawler:
         time.sleep(self.INTERVAL_TIME)
 
         for n in range(self.MAX_N_RETRY):
-            res = requests.session().get(url)
+            time.sleep(10 * n * self.INTERVAL_TIME)
 
-            if res.status_code == 200:
+            try:
+                res = requests.session().get(url)
+            except requests.ConnectionError:
+                print('Connection aborted.')
+                res = None
+
+            if res and res.status_code == 200:
                 return res.text
             else:
                 print('retry (WarsCrawler.get_html())')
                 sys.stdout.flush()
-                time.sleep(10 * n * self.INTERVAL_TIME)
         else:
             sys.exit('Exceeded MAX_N_RETRY (WarsCrawler.get_html())')
 
@@ -117,7 +122,7 @@ class WarsCrawler:
         csvpath: string
             クロールするurlの入っているcsvのパス
         '''
-        df_crawled = pd.read_csv(csvpath, index_col=0)
+        df_crawled = pd.read_csv(csvpath)
 
         not_crawled = df_crawled.query('crawled==0')
 
