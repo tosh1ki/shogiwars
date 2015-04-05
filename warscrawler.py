@@ -273,6 +273,7 @@ class WarsCrawler:
                 results.append(w_ap)
 
             else:
+                # 時間の行の処理
                 if (i - 1) % 4 == 0:
                     # 先手の残り時間を計算
                     sente_remain_time = int(w[1:])
