@@ -1,23 +1,27 @@
-## wars-an: 将棋ウォーズの棋譜を解析したい
+shogiwars
+=================
 
-### 作成物
+将棋ウォーズの棋譜を収集・解析したい
 
-- wars-scrape.py
+# 作成物
+
+- main_crawl.py
+- warscrawler.py
   - 将棋ウォーズの棋譜を収集するための各種関数
-  - **明示されていない棋譜ページの仕様に依存しているので，各関数がそのうち使えなくなる可能性がある．**
-  - 実行する前に `mongod --config mongodb.config`, `mongo`でMongoDBを起動して，`use warskifu` などとしておく．
-- wars-visualize.ipynb
-  - スクレイピングしたデータの解析，可視化
-  - [nbviewer.ipython.org/github/tosh1ki/wars-an/blob/master/wars-visualize.ipynb](http://nbviewer.ipython.org/github/tosh1ki/wars-an/blob/master/wars-visualize.ipynb)
+  - **明示されていない棋譜ページの仕様に依存しているので，そのうち使えなくなる可能性がある．**
+- ipynb/
+  - wars-visualize.ipynb
+	- スクレイピングしたデータの解析，可視化
+	- [nbviewer.ipython.org/github/tosh1ki/wars-an/blob/master/wars-visualize.ipynb](http://nbviewer.ipython.org/github/tosh1ki/wars-an/blob/master/wars-visualize.ipynb)
 
 
-### 将棋ウォーズのrobots.txt
+# 将棋ウォーズ内部の仕様について
+## 将棋ウォーズのrobots.txt
 「棋譜をクローリングするわけだし一応 `robots.txt` を確認しておこう」と思って見てみたら全文コメントアウトされていて困った．そのうち編集される可能性が高そうなので，**プログラムを実行する際には注意する**．
 
 [shogiwars.heroz.jp/robots.txt](http://shogiwars.heroz.jp/robots.txt)
 
-
-### gtype
+## gtype
 棋譜に付属している情報で，`gtype` というのがある．おそらく game type(?) の略だと思う．
 
 - '' : 10分切れ負け
@@ -25,7 +29,7 @@
 - 's1' : 10秒指し
 
 
-### 将棋ウォーズの独自棋譜フォーマットについて
+## 将棋ウォーズの独自棋譜フォーマットについて
 将棋ウォーズではCSA形式に似た独自の棋譜フォーマットを用いている．仕様がわからないので**推測**した結果を以下にメモしておく．
 
 将棋ウォーズでは以下のようなフォーマットを用いている．
@@ -36,7 +40,7 @@
 
 また，最後の `GOTE_WIN_TORYO` は文字通り(先手が投了し)後手が勝った，という意味であると考えられる．普通のCSA形式であれば `%TORYO` だけで済ませるところだが，将棋ウォーズでは `GOTE_WIN_TORYO` などとしている．
 
-#### 終局時の文字列
+### 終局時の文字列
 
 終局時に出てくる文字列としては，（確認した限りでは）以下のものがある．先手勝ちの場合についてのみ書くが，後手勝ちの場合は `SENTE` の部分を `GOTE` に変えるだけで良い．
 
@@ -50,7 +54,7 @@
 などがある．**「相入玉で引き分け」もあるはず(?)だが確認できていない．**
 
 
-### 参考文献
+# 参考文献
 
 - [日本将棋連盟公認 将棋ウォーズ](http://shogiwars.heroz.jp/)
 - [CSA標準棋譜ファイル形式 v2.2](http://www.computer-shogi.org/protocol/record_v22.html)
