@@ -17,8 +17,8 @@ import pdb
 
 gtype_dict = {'10m': '', '3m': 'sb', '10s': 's1'}
 
-WCSA_PATTERN = re.compile(r'(?<=receiveMove\(\").+(?=\"\);)')
-GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){.+?}', re.DOTALL)
+WCSA_PATTERN = re.compile(r'(?<=receiveMove\(\").+?(?=\"\);)')
+GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){[^}]+}', re.DOTALL)
 
 
 class WarsCrawler:
