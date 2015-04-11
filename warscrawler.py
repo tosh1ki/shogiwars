@@ -180,7 +180,8 @@ class WarsCrawler:
 
         return results
 
-    def get_kifu_url(self, users, gtype, csvpath, max_iter=10):
+    def get_kifu_url(self, users, gtype, csvpath,
+                     max_iter=10, if_exists='append'):
         '''ユーザー名とgtypeを指定して棋譜のurlを取得する．
 
         Args
@@ -203,6 +204,11 @@ class WarsCrawler:
         df = pd.DataFrame(url_list)
         df.ix[:, 1] = 0
         df.columns = ['url', 'crawled']
+        
+        if os.path.exists(csvpath) and if_exists == 'append':
+            df_before = pd.read_csv(csvpath)
+            df = pd.merge([df_before, df], axis=0) 
+
         df.to_csv(csvpath)
 
         return df
