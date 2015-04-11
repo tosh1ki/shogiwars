@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import os
 import re
 import yaml
 import sys
@@ -54,13 +55,13 @@ class WarsCrawler:
             try:
                 res = requests.session().get(url)
             except requests.ConnectionError:
-                print('Connection aborted.')
+                print('\nConnection aborted.\n')
                 res = None
 
             if res and res.status_code == 200:
                 return res.text
             else:
-                print('retry (WarsCrawler.get_html())')
+                print('\nretry (WarsCrawler.get_html())\n')
                 sys.stdout.flush()
         else:
             sys.exit('Exceeded MAX_N_RETRY (WarsCrawler.get_html())')
@@ -168,6 +169,9 @@ class WarsCrawler:
 
         while page < max_page:
             _url = url.format(title=title, page=page)
+            print(_url)
+            sys.stdout.flush()
+            
             html = self.get_html(_url)
             _users = re.findall(r'\/users\/(\w+)', html)
 
@@ -198,6 +202,8 @@ class WarsCrawler:
         url_list = []
 
         for _user in users:
+            print(_user)
+
             _url_list = self.get_url(_user, gtype=gtype, max_iter=max_iter)
             url_list.extend(_url_list)
 
