@@ -2,20 +2,16 @@
 # -*- coding: utf-8 -*-
 
 
-import sqlite3
 import os
-from collections import Counter
 import re
+import datetime as dt
+import sqlite3
 import numpy as np
-import scipy.stats as sp
 import pandas as pd
 import matplotlib.pyplot as plt
-import datetime as dt
-from sklearn import svm
 from sklearn import neighbors
-from sklearn.feature_extraction import DictVectorizer
 from sklearn.cross_validation import train_test_split
-import scipy.cluster.hierarchy as sch
+from scipy.cluster.hierarchy import linkage, dendrogram
 
 import pdb
 
@@ -67,6 +63,7 @@ def extract_kifu(kifu):
 
     return data_marged
 
+
 if __name__ == '__main__':
 
     # Connect to SQLite
@@ -116,9 +113,9 @@ if __name__ == '__main__':
 
 
     ## 階層型クラスタリング
-    res_linkage = sch.linkage(np.array(X), method='average')
+    res_linkage = linkage(np.array(X), method='average')
 
     plt.figure(figsize=(6,12*X.shape[0]/100))
     plt.subplots_adjust(left=0.1, right=0.8)
-    sch.dendrogram(res_linkage, labels=list(y), orientation='right')
+    dendrogram(res_linkage, labels=list(y), orientation='right')
     plt.savefig('dendrogram{0}.pdf'.format(gtype))
