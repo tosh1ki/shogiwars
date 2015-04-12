@@ -115,9 +115,9 @@ if __name__ == '__main__':
 
 
     ## 階層型クラスタリング
-    li = sch.linkage(np.array(X))
+    res_linkage = sch.linkage(np.array(X), method='average')
 
-    plt.figure(figsize=(6,12*len(index)/100))
+    plt.figure(figsize=(6,12*X.shape[0]/100))
     plt.subplots_adjust(left=0.1, right=0.8)
-    sch.dendrogram(li, labels=list(y), orientation='right')
+    sch.dendrogram(res_linkage, labels=list(y), orientation='right')
     plt.savefig('dendrogram.pdf')
