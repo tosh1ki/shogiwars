@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import os
 import re
 import yaml
 import sys
@@ -17,8 +18,8 @@ import pdb
 
 gtype_dict = {'10m': '', '3m': 'sb', '10s': 's1'}
 
-WCSA_PATTERN = re.compile(r'(?<=receiveMove\(\").+(?=\"\);)')
-GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){.+?}', re.DOTALL)
+WCSA_PATTERN = re.compile(r'(?<=receiveMove\(\").+?(?=\"\);)')
+GAME_HEADER_PATTERN = re.compile(r'(?<=var\sgamedata\s=\s){[^}]+}', re.DOTALL)
 
 
 class WarsCrawler:
@@ -54,13 +55,13 @@ class WarsCrawler:
             try:
                 res = requests.session().get(url)
             except requests.ConnectionError:
-                print('Connection aborted.')
+                print('\nConnection aborted.\n')
                 res = None
 
             if res and res.status_code == 200:
                 return res.text
             else:
-                print('retry (WarsCrawler.get_html())')
+                print('\nretry (WarsCrawler.get_html())\n')
                 sys.stdout.flush()
         else:
             sys.exit('Exceeded MAX_N_RETRY (WarsCrawler.get_html())')
@@ -168,6 +169,9 @@ class WarsCrawler:
 
         while page < max_page:
             _url = url.format(title=title, page=page)
+            print(_url)
+            sys.stdout.flush()
+            
             html = self.get_html(_url)
             _users = re.findall(r'\/users\/(\w+)', html)
 
@@ -180,7 +184,8 @@ class WarsCrawler:
 
         return results
 
-    def get_kifu_url(self, users, gtype, csvpath, max_iter=10):
+    def get_kifu_url(self, users, gtype, csvpath,
+                     max_iter=10, if_exists='append'):
         '''ユーザー名とgtypeを指定して棋譜のurlを取得する．
 
         Args
@@ -196,13 +201,22 @@ class WarsCrawler:
         '''
         url_list = []
 
+        print('\ngtype:{0}, max_iter:{1}\n'.format(gtype, max_iter))
+
         for _user in users:
+            print(_user)
+
             _url_list = self.get_url(_user, gtype=gtype, max_iter=max_iter)
             url_list.extend(_url_list)
 
         df = pd.DataFrame(url_list)
         df.ix[:, 1] = 0
         df.columns = ['url', 'crawled']
+        
+        if os.path.exists(csvpath) and if_exists == 'append':
+            df_before = pd.read_csv(csvpath, index_col=0)
+            df = pd.concat([df_before, df], axis=0, ignore_index=True)
+
         df.to_csv(csvpath)
 
         return df
@@ -273,6 +287,7 @@ class WarsCrawler:
                 results.append(w_ap)
 
             else:
+                # 時間の行の処理
                 if (i - 1) % 4 == 0:
                     # 先手の残り時間を計算
                     sente_remain_time = int(w[1:])
