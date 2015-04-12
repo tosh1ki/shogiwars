@@ -9,10 +9,12 @@ shogiwars
 - warscrawler.py
   - 将棋ウォーズの棋譜を収集するための各種関数
   - **明示されていない棋譜ページの仕様に依存しているので，そのうち使えなくなる可能性がある．**
+- extract.py
+  - 特徴量を抽出する
 - ipynb/
-  - wars-visualize.ipynb
-	- スクレイピングしたデータの解析，可視化
-	- [nbviewer.ipython.org/github/tosh1ki/wars-an/blob/master/wars-visualize.ipynb](http://nbviewer.ipython.org/github/tosh1ki/wars-an/blob/master/wars-visualize.ipynb)
+  - **古いバージョン**
+  - [データの可視化](http://nbviewer.ipython.org/github/tosh1ki/shogiwars/blob/master/ipynb/wars-visualize.ipynb)
+  - [将棋ウォーズで削除されたアカウントの棋譜を検討してみる](http://nbviewer.ipython.org/github/tosh1ki/shogiwars/blob/master/ipynb/junpe_.ipynb)
 
 
 # 将棋ウォーズ内部の仕様について
@@ -24,9 +26,9 @@ shogiwars
 ## gtype
 棋譜に付属している情報で，`gtype` というのがある．おそらく game type(?) の略だと思う．
 
-- '' : 10分切れ負け
-- 'sb' : 3分切れ負け (bullet modeの'b'?)
-- 's1' : 10秒指し
+- `  ` : 10分切れ負け
+- `sb` : 3分切れ負け (bullet modeの'b'?)
+- `s1` : 10秒指し
 
 
 ## 将棋ウォーズの独自棋譜フォーマットについて
