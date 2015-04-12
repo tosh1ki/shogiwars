@@ -201,6 +201,8 @@ class WarsCrawler:
         '''
         url_list = []
 
+        print('\ngtype:{0}, max_iter:{1}\n'.format(gtype, max_iter))
+
         for _user in users:
             print(_user)
 
@@ -212,8 +214,8 @@ class WarsCrawler:
         df.columns = ['url', 'crawled']
         
         if os.path.exists(csvpath) and if_exists == 'append':
-            df_before = pd.read_csv(csvpath)
-            df = pd.merge([df_before, df], axis=0) 
+            df_before = pd.read_csv(csvpath, index_col=0)
+            df = pd.concat([df_before, df], axis=0, ignore_index=True)
 
         df.to_csv(csvpath)
 

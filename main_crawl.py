@@ -16,9 +16,9 @@ if __name__ == '__main__':
         # csvpathのファイルが存在しない場合
 
         # 将棋ウォーズ第4回名人戦の棋譜を取得する．
-        t_users = wcrawler.get_users('meijin4', max_page=1)
+        t_users = wcrawler.get_users('meijin4', max_page=3)
 
         for mode, gtype in gtype_dict.items():
             df_url = wcrawler.get_kifu_url(t_users, gtype, csvpath)
 
-    # df_kifu = wcrawler.get_all_kifu(csvpath)
+    df_kifu = wcrawler.get_all_kifu(csvpath)
