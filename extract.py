@@ -89,6 +89,7 @@ if __name__ == '__main__':
     columns.extend(map(lambda time: 't' + str(time), range(t_length)))
 
     feature_value = pd.DataFrame(data_list, columns=columns)
+    feature_value.to_csv('output{0}.csv'.format(gtype))
     feature_value.ix[:, 7:].T.plot(legend=False)
 
     X = feature_value.ix[:, 7:]
@@ -98,9 +99,9 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42)
 
-    # predict by k-NN
+    # predict by k-NearestNeighbor
     accuracy_rate_list = []
-    k_list = range(1, 30)
+    k_list = range(1, 10)
     for k in k_list:
         clf = neighbors.KNeighborsClassifier(k)
         clf.fit(X_train, y_train)
@@ -120,4 +121,4 @@ if __name__ == '__main__':
     plt.figure(figsize=(6,12*X.shape[0]/100))
     plt.subplots_adjust(left=0.1, right=0.8)
     sch.dendrogram(res_linkage, labels=list(y), orientation='right')
-    plt.savefig('dendrogram.pdf')
+    plt.savefig('dendrogram{0}.pdf'.format(gtype))
